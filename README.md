@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="https://humanbound.ai/assets/logo-dark.svg" alt="Humanbound" width="280"/>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-light.svg"/>
+    <source media="(prefers-color-scheme: light)" srcset="assets/logo-dark.svg"/>
+    <img src="assets/logo-dark.svg" alt="Humanbound" width="280"/>
+  </picture>
 </p>
 
 <h3 align="center">hb-scan</h3>
