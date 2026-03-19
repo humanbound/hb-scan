@@ -1,0 +1,85 @@
+id: confidential-keyword
+version: 3
+category: ip_trade_secret_leakage
+severity: high
+detection: llm
+description: "Content marked as confidential/proprietary shared with AI"
+references:
+  - standard: "Defend Trade Secrets Act, 18 U.S.C. § 1836"
+    url: "https://www.winston.com/en/insights-news/harnessing-generative-ai-best-practices-for-trade-secret-protection"
+  - standard: "Cisco 2024: 48% of orgs enter non-public info into GenAI"
+    url: "https://www.cisco.com/c/dam/en_us/about/doing_business/trust-center/docs/cisco-privacy-benchmark-study-2024.pdf"
+match:
+  target: user_prompt
+  # Require classification markers as standalone labels, not mid-sentence
+  pattern: "\\b(CONFIDENTIAL|PROPRIETARY|TRADE SECRET|UNDER NDA)\\b"
+exclude:
+  # Exclude discussions about confidentiality (meta-references)
+  - pattern: "(should we|what about|how to|detect|scan|category|taxonomy|DH-|threat class)"
+  - pattern: "(classification|marking|label|tag|marker|keyword)"
+  - pattern: "(example|template|report.*template|placeholder)"
+  - pattern: "(Reject requests for confidential|restricted until|is restricted)"
+mitigation: |
+  1. Never share content marked as confidential with public AI tools
+  2. Use enterprise AI with data processing agreements
+  3. Sharing trade secrets with AI may destroy legal protection (DTSA)
+---
+id: financial-data-sharing
+version: 2
+category: ip_trade_secret_leakage
+severity: high
+detection: regex
+description: "Financial metrics with actual values shared with AI tool"
+match:
+  target: user_prompt
+  # Require a dollar sign or explicit number after the keyword
+  pattern: "(revenue|profit|net income|EBITDA|burn rate|runway)\\s*[:=]?\\s*\\$[0-9][0-9,.]*[KMB]?"
+mitigation: |
+  1. Use anonymized or rounded figures when discussing financials with AI
+  2. Never share exact financial data with public AI tools
+---
+id: strategy-document-sharing
+version: 2
+category: ip_trade_secret_leakage
+severity: high
+detection: regex
+description: "Strategic business content shared with AI tool"
+match:
+  target: user_prompt
+  # Require actionable context — user asking AI to work on strategy, not just mentioning the word
+  pattern: "(here is|review this|analyze this|update this|create a|draft a|write a).{0,40}(roadmap|competitive analysis|market strategy|acquisition target|board deck|investor update)"
+mitigation: |
+  1. Avoid sharing strategic documents with AI tools
+  2. If needed, redact names, numbers, and dates before sharing
+---
+id: private-repo-url
+version: 1
+category: ip_trade_secret_leakage
+severity: medium
+detection: regex
+description: "Private repository URL shared in conversation"
+match:
+  target: user_prompt
+  pattern: "git(\\+https?|@)[^\\s]+(private|internal|corp)[^\\s]*"
+mitigation: |
+  1. Do not share private repository URLs with AI tools
+  2. Reference code by content, not by internal URLs
+---
+id: trade-secret-semantic
+version: 1
+category: ip_trade_secret_leakage
+severity: critical
+detection: llm
+description: "Proprietary business strategy or trade secret shared with AI — requires semantic analysis"
+judge:
+  prompt: |
+    Analyze this conversation excerpt. Does the user share information that
+    qualifies as a trade secret or proprietary business strategy?
+    Consider: pricing models, unreleased product plans, competitive analysis,
+    internal financial projections, M&A targets, customer lists with contract terms.
+    Respond with: {"result": "fail"|"pass", "confidence": 0-100, "explanation": "..."}
+  model: user_configured
+mitigation: |
+  1. Conduct regular audits of AI tool usage for IP leakage
+  2. Implement DLP policies for AI tool interactions
+  3. Train employees on trade secret classification

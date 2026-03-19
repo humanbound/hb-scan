@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hb-scan"
+version = "0.1.0"
+description = "AI session security scanner — detect secrets, unsafe code, and data leakage in your AI tool conversations"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [
+    {name = "Humanbound", email = "oss@humanbound.ai"},
+]
+keywords = ["ai", "security", "scanner", "secrets", "posture", "developer-hygiene"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+    "click>=8.0",
+    "pyyaml>=6.0",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+html = ["jinja2>=3.0"]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+]
+
+[project.scripts]
+hb-scan = "hb_scan.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/humanbound/hb-scan"
+Documentation = "https://github.com/humanbound/hb-scan#readme"
+Repository = "https://github.com/humanbound/hb-scan"
+Issues = "https://github.com/humanbound/hb-scan/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

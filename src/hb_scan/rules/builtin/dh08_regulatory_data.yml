@@ -1,0 +1,116 @@
+id: gdpr-personal-data
+version: 3
+category: regulatory_data_exposure
+severity: high
+detection: llm
+description: "GDPR-relevant personal data shared with AI — requires semantic analysis"
+references:
+  - standard: "GDPR Art. 5(1)(c): Data Minimization"
+    url: "https://www.activemind.legal/guides/chatgpt/"
+  - standard: "Italy Garante: EUR 15M fine to OpenAI"
+    url: "https://www.lewissilkin.com/en/insights/2025/01/14/openai-faces-15-million-fine-as-the-italian-garante-strikes-again-102jtqc"
+judge:
+  prompt: |
+    Does this conversation contain actual personal data (real names with email,
+    phone, address, DOB, or national ID)? Exclude test data, examples, and
+    discussions about GDPR. Only flag real personal data of real individuals.
+  model: user_configured
+mitigation: |
+  1. De-identify personal data before using AI tools
+  2. Ensure GDPR-compliant DPA with AI vendor (Art. 28)
+  3. Italy fined OpenAI EUR 15M for GDPR violations in 2024
+---
+id: hipaa-health-data
+version: 3
+category: regulatory_data_exposure
+severity: high
+detection: llm
+description: "HIPAA-protected health information shared with AI — requires semantic analysis"
+references:
+  - standard: "HIPAA BAA Requirement"
+    url: "https://www.hipaajournal.com/when-ai-technology-and-hipaa-collide/"
+judge:
+  prompt: |
+    Does this conversation contain actual protected health information (PHI)?
+    Look for: patient names with diagnosis, treatment plans, prescription details,
+    medical record numbers. Exclude discussions about HIPAA compliance or
+    debugging context using the word "diagnosis."
+  model: user_configured
+mitigation: |
+  1. Public AI tools are NOT HIPAA-compliant (no BAAs)
+  2. Use HIPAA-certified AI solutions for health data
+  3. PHI entered into AI tools cannot be recouped
+---
+id: financial-mnpi
+version: 3
+category: regulatory_data_exposure
+severity: high
+detection: llm
+description: "Material non-public financial information shared with AI — requires semantic analysis"
+references:
+  - standard: "SEC Rule 10b-5, Regulation FD"
+    url: "https://www.smarsh.com/compliance-glossary/material-non-public-information/"
+judge:
+  prompt: |
+    Does this conversation contain material non-public information (MNPI)?
+    Look for: unreleased earnings, upcoming M&A, insider trading context.
+    Exclude discussions about MNPI as a concept or regulatory framework.
+  model: user_configured
+mitigation: |
+  1. Never share MNPI with AI tools
+  2. Ensure compliance with SEC/FINRA supervision requirements
+  3. AI tools lack the audit trails required for MNPI handling
+---
+id: attorney-client-privilege
+version: 3
+category: regulatory_data_exposure
+severity: high
+detection: llm
+description: "Attorney-client privileged content shared with AI — requires semantic analysis"
+references:
+  - standard: "ABA Formal Opinion 512 (July 2024)"
+    url: "https://www.americanbar.org/news/abanews/aba-news-archives/2024/07/aba-issues-first-ethics-guidance-ai-tools/"
+judge:
+  prompt: |
+    Does this conversation contain actual attorney-client privileged content?
+    Look for: legal advice about a specific case/client, work product,
+    communications marked as privileged. Exclude discussions about privilege
+    as a legal concept or taxonomy category.
+  model: user_configured
+mitigation: |
+  1. ABA Opinion 512: boilerplate consent is NOT adequate for AI usage
+  2. Lawyers must understand how AI tools process client data
+  3. Use enterprise AI with verifiable data handling guarantees
+---
+id: education-records
+version: 2
+category: regulatory_data_exposure
+severity: high
+detection: llm
+description: "FERPA-protected education records shared with AI — requires semantic analysis"
+judge:
+  prompt: |
+    Does this conversation contain actual student education records?
+    Look for: student names with grades, transcripts, enrollment status,
+    disciplinary records. Exclude general discussions about FERPA.
+  model: user_configured
+mitigation: |
+  1. De-identify student records before AI processing
+  2. FERPA requires consent for disclosure of education records
+---
+id: regulatory-semantic-analysis
+version: 1
+category: regulatory_data_exposure
+severity: high
+detection: llm
+description: "Deep analysis for any regulated data category"
+judge:
+  prompt: |
+    Analyze this conversation. Does the user share data that falls under
+    regulatory protection? Consider GDPR, HIPAA, SOX/SEC, attorney-client
+    privilege, FERPA. Only flag actual regulated data, not discussions about
+    regulations or compliance frameworks.
+  model: user_configured
+mitigation: |
+  1. Conduct DPIA before deploying AI tools with regulated data
+  2. Implement data classification and enforce per-category AI policies
