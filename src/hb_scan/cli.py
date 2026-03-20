@@ -1,12 +1,14 @@
 """hb-scan CLI — AI session security scanner."""
 
 import sys
+import webbrowser
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
 import click
 from rich.console import Console
+from rich.table import Table
 
 from hb_scan import __version__
 from hb_scan.discover import discover_all, get_discoverers
@@ -17,6 +19,7 @@ from hb_scan import messages
 from hb_scan.report.terminal import print_report
 from hb_scan.report.json_report import generate_json
 from hb_scan.report.html import generate_html
+from hb_scan.history import save_scan, load_history, get_latest_report, get_trend
 from hb_scan.telemetry.anonymous import send_ping
 
 
@@ -68,6 +71,8 @@ def main(ctx, tool, since, project, rules_dir, output_file, output_format, no_te
       hb-scan --output report.html     # Generate detailed HTML report
       hb-scan --since 7d               # Last 7 days only
       hb-scan --format json            # Machine-readable output
+      hb-scan schedule daily           # Schedule periodic scans
+      hb-scan history                  # View score history
     """
     if version:
         click.echo(f"hb-scan {__version__}")
@@ -164,17 +169,24 @@ def main(ctx, tool, since, project, rules_dir, output_file, output_format, no_te
         # Terminal summary
         print_report(insights, console)
 
-    # HTML report (always generate if --output specified and not json)
+    # Generate HTML and save to history
+    html_str = generate_html(insights)
+    report_path = save_scan(insights, html_str)
+
+    # Also write to explicit output or cwd if requested
     if output_file and output_format != "json":
-        html_str = generate_html(insights)
         Path(output_file).write_text(html_str)
-        console.print(f"  [dim]Full report: {output_file}[/dim]")
-    elif not output_file and output_format == "terminal":
-        # Auto-generate HTML in current directory
-        html_path = Path("hb-scan-report.html")
-        html_str = generate_html(insights)
-        html_path.write_text(html_str)
-        console.print(f"  [dim]Full report: {html_path}[/dim]")
+        console.print(f"  [dim]Report: {output_file}[/dim]")
+    elif output_format == "terminal":
+        console.print(f"  [dim]Report: {report_path}[/dim]")
+
+    # Show trend if we have history
+    trend = get_trend()
+    if trend:
+        console.print(f"  [dim]Trend: {trend}[/dim]")
+
+    console.print(f"  [dim]History: hb-scan history[/dim]")
+    console.print()
 
     # Telemetry
     if not no_telemetry:
@@ -234,6 +246,113 @@ def rules(path):
     if skipped:
         console.print()
         console.print(f"  [dim]{len(skipped)} rules require LLM judge — run with --llm to enable[/dim]")
+    console.print()
+
+
+@main.command()
+@click.option("--open", "open_latest", is_flag=True, help="Open the latest HTML report in browser")
+@click.option("--last", "last_n", default=10, help="Number of entries to show (default: 10)")
+def history(open_latest, last_n):
+    """View scan history and score trends."""
+    if open_latest:
+        report = get_latest_report()
+        if report:
+            webbrowser.open(f"file://{report}")
+            console.print(f"  Opened: {report}")
+        else:
+            console.print("[yellow]  No scan history found. Run hb-scan first.[/yellow]")
+        return
+
+    entries = load_history()
+    if not entries:
+        console.print()
+        console.print("[yellow]  No scan history found. Run hb-scan first.[/yellow]")
+        console.print()
+        return
+
+    console.print()
+    console.print("[bold]hb-scan — Score History[/bold]")
+    console.print()
+
+    table = Table(show_header=True, header_style="bold dim", box=None, padding=(0, 2))
+    table.add_column("Date", style="dim")
+    table.add_column("Score", justify="right")
+    table.add_column("Grade", justify="center")
+    table.add_column("Findings", justify="right")
+    table.add_column("HOI", justify="right")
+    table.add_column("Creds", justify="right")
+    table.add_column("Sessions", justify="right", style="dim")
+
+    recent = entries[-last_n:]
+    for e in reversed(recent):
+        score = e["score"]
+        grade = e["grade"]
+        grade_color = "green" if grade in ("A", "B") else ("yellow" if grade == "C" else "red")
+        table.add_row(
+            e.get("date_short", ""),
+            str(score),
+            f"[{grade_color}]{grade}[/{grade_color}]",
+            str(e.get("findings", 0)),
+            str(e.get("hoi", "")),
+            str(e.get("active_creds", 0)),
+            str(e.get("sessions", "")),
+        )
+
+    console.print(table)
+
+    trend = get_trend()
+    if trend:
+        console.print(f"\n  [dim]Trend: {trend}[/dim]")
+
+    latest = get_latest_report()
+    if latest:
+        console.print(f"  [dim]Latest report: {latest}[/dim]")
+        console.print(f"  [dim]Open it: hb-scan history --open[/dim]")
+
+    console.print()
+
+
+@main.command()
+@click.argument("interval", default="daily",
+                type=click.Choice(["hourly", "4h", "8h", "12h", "daily", "weekly"]))
+def schedule(interval):
+    """Schedule periodic scans.
+
+    \b
+    Intervals: hourly, 4h, 8h, 12h, daily, weekly
+    Uses launchd (macOS) or systemd (Linux).
+    """
+    from hb_scan.scheduler import install, is_installed
+
+    console.print()
+    if is_installed():
+        console.print("  [yellow]A schedule is already installed.[/yellow]")
+        console.print("  [dim]Run 'hb-scan unschedule' to remove it first.[/dim]")
+        console.print()
+        return
+
+    result = install(interval)
+    console.print(f"  [green]✓[/green] {result}")
+    console.print()
+    console.print("  [dim]Reports saved to: ~/.hb-scan/reports/[/dim]")
+    console.print("  [dim]View history: hb-scan history[/dim]")
+    console.print("  [dim]Remove: hb-scan unschedule[/dim]")
+    console.print()
+
+
+@main.command()
+def unschedule():
+    """Remove scheduled periodic scans."""
+    from hb_scan.scheduler import uninstall, is_installed
+
+    console.print()
+    if not is_installed():
+        console.print("  [dim]No schedule installed.[/dim]")
+        console.print()
+        return
+
+    result = uninstall()
+    console.print(f"  [green]✓[/green] {result}")
     console.print()
 
 
