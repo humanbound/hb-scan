@@ -214,21 +214,29 @@ class RuleEngine:
         target = rule.match.target
         tool_filter = rule.match.tool_filter
 
+        # "except_tool_input" scans everything except AI-generated commands —
+        # user prompts, assistant responses, and tool output (file contents read by AI)
+        # but NOT tool input (commands the AI chose to run)
+        scan_user = target in ("user_prompt", "any", "except_tool_input")
+        scan_assistant = target in ("assistant_response", "any", "except_tool_input")
+        scan_tool_input = target in ("tool_input", "any")
+        scan_tool_output = target in ("tool_output", "any", "except_tool_input")
+
         for idx, msg in enumerate(session.messages):
-            if target in ("user_prompt", "any") and msg.role == "user":
+            if scan_user and msg.role == "user":
                 targets.append(("user_prompt", msg.text, idx))
 
-            if target in ("assistant_response", "any") and msg.role == "assistant":
+            if scan_assistant and msg.role == "assistant":
                 targets.append(("assistant_response", msg.text, idx))
 
-            if target in ("tool_input", "any"):
+            if scan_tool_input:
                 for tc in msg.tool_calls:
                     if tool_filter and tc.name != tool_filter:
                         continue
                     input_text = self._serialize_tool_input(tc)
                     targets.append(("tool_input", input_text, idx))
 
-            if target in ("tool_output", "any"):
+            if scan_tool_output:
                 for tc in msg.tool_calls:
                     if tool_filter and tc.name != tool_filter:
                         continue
