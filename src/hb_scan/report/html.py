@@ -255,8 +255,9 @@ _BRAND_LOGO = """<svg viewBox="240 670 170 150" style="height:40px;" fill="none"
 </svg>"""
 
 
-def _render_evidence(evidence: list) -> str:
-    """Render conversation evidence as a chat-style block."""
+def _render_evidence(evidence: list, source_file: str = "", session_id: str = "",
+                     timestamp=None) -> str:
+    """Render conversation evidence as a chat-style block with source traceability."""
     if not evidence:
         return ""
 
@@ -283,12 +284,31 @@ def _render_evidence(evidence: list) -> str:
             f'</div>'
         )
 
+    # Source traceability footer
+    source_info = []
+    if source_file:
+        source_info.append(f'Source: <code style="font-size:11px;">{_esc(source_file)}</code>')
+    if session_id:
+        source_info.append(f'Session: <code style="font-size:11px;">{_esc(session_id)}</code>')
+    if timestamp:
+        ts_str = timestamp.strftime("%Y-%m-%d %H:%M UTC") if hasattr(timestamp, "strftime") else str(timestamp)
+        source_info.append(f'Time: {_esc(ts_str)}')
+
+    source_html = ""
+    if source_info:
+        source_html = (
+            f'<div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--border-light);'
+            f'font-size:11px;color:var(--text-dim);">'
+            f'{" &middot; ".join(source_info)}'
+            f'</div>'
+        )
+
     return (
         '<details style="margin:10px 0;">'
         '<summary style="cursor:pointer;font-size:13px;color:var(--brand-orange);font-weight:600;">'
         'View conversation context</summary>'
         f'<div style="background:var(--surface);border-radius:8px;padding:16px;margin-top:8px;'
-        f'border:1px solid var(--border-light);">{"".join(turns)}</div>'
+        f'border:1px solid var(--border-light);">{"".join(turns)}{source_html}</div>'
         '</details>'
     )
 
@@ -423,7 +443,7 @@ def _credentials_section(i):
     for c in sorted(creds.credentials, key=lambda c: (c.is_expired, c.credential_type)):
         status = '<span class="sev-badge sev-high">Active</span>' if not c.is_expired else '<span class="sev-badge sev-low">Expired</span>'
         preview = _esc(c.redacted_preview[:60])
-        evidence_html = _render_evidence(c.evidence) if c.evidence else ""
+        evidence_html = _render_evidence(c.evidence, c.source_file) if c.evidence else ""
         rows.append(
             f'<tr><td>{_esc(c.credential_type)}</td><td>{status}</td>'
             f'<td><code style="font-size:12px;color:var(--text-muted);">{preview}</code></td>'
@@ -467,7 +487,7 @@ def _section_card(title, anchor, section, desc, refs):
     cards = []
     for f in section.findings[:8]:
         match_block = f'<div class="evidence-block">{_esc(f.match_context)}</div>' if f.match_context else ""
-        evidence_block = _render_evidence(f.evidence) if f.evidence else ""
+        evidence_block = _render_evidence(f.evidence, f.source_file, f.session_id, f.timestamp) if f.evidence else ""
         mitigation = f'<div class="remediation-block"><strong>Fix:</strong> {_esc(f.mitigation)}</div>' if f.mitigation else ""
         ref_tags = "".join(f'<span class="tag">{_esc(r.get("standard", ""))}</span>' for r in f.references if r.get("standard"))
         tags_div = f'<div class="compliance-tags">{ref_tags}</div>' if ref_tags else ""

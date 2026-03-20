@@ -32,6 +32,7 @@ class Session:
     tool: str                                   # "claude-code", "chatgpt-desktop", etc.
     project_path: str = ""                      # Original project directory
     cwd: str = ""                               # Working directory (for scope detection)
+    source_file: str = ""                       # Absolute path to the source data file (JSONL, etc.)
     messages: List[Message] = field(default_factory=list)
     started_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None

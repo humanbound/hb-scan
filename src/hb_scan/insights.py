@@ -23,6 +23,7 @@ class CredentialInsight:
     redacted_preview: str = ""  # e.g. "AKIA************CDEF"
     rule_id: str = ""
     evidence: List[dict] = field(default_factory=list)  # conversation context
+    source_file: str = ""       # path to source data file
 
 
 @dataclass
@@ -262,6 +263,7 @@ def _aggregate_credentials(findings: List[Finding]) -> CredentialSummary:
             rule_id=f.rule_id,
             first_seen=f.timestamp.strftime("%b %d") if f.timestamp else "",
             evidence=f.evidence if f.evidence else [],
+            source_file=f.source_file,
         )
         seen[key] = cred
 

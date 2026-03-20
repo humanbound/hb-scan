@@ -25,7 +25,8 @@ class Finding:
     target: str = ""        # "user_prompt", "tool_input", etc.
     references: List[dict] = field(default_factory=list)
     experimental: bool = False
-    evidence: List[dict] = field(default_factory=list)  # [{role, text}] conversation context
+    evidence: List[dict] = field(default_factory=list)  # [{role, text, is_match}] conversation context
+    source_file: str = ""       # absolute path to source data file for verification
 
     @property
     def id(self) -> str:

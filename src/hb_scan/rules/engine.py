@@ -156,6 +156,7 @@ class RuleEngine:
                 references=[{"standard": r.standard, "url": r.url} for r in rule.references],
                 experimental=rule.experimental,
                 evidence=evidence,
+                source_file=session.source_file,
             ))
 
         return findings

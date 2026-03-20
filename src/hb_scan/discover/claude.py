@@ -149,6 +149,7 @@ class ClaudeDiscoverer(BaseDiscoverer):
             tool=self.name,
             project_path=project_path,
             cwd=cwd,
+            source_file=str(jsonl_path),
             messages=messages,
             started_at=first_ts,
             ended_at=last_ts,
