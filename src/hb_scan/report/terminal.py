@@ -109,6 +109,12 @@ def print_report(insights: ScanInsights, console: Console = None):
         if parts:
             c.print(f"  [dim]Penalty: {', '.join(parts)}[/dim]")
 
+    # Coverage caveat
+    if insights.rules_skipped_llm > 0:
+        pct = round(insights.rules_active / insights.rules_total * 100)
+        c.print(f"  [yellow]Note:[/yellow] This score reflects {pct}% of available checks (pattern-based only).")
+        c.print(f"  [dim]{insights.rules_skipped_llm} rules for regulatory/semantic analysis require LLM — run with --llm[/dim]")
+
     # Rule coverage
     c.print()
     if insights.rules_skipped_llm > 0:

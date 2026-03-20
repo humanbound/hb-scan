@@ -233,13 +233,15 @@ def assess_compliance(insights: ScanInsights) -> List[FrameworkAssessment]:
             statuses = [cat_status.get(c, "not_assessed") for c in categories]
 
             # Determine control status
-            if all(s == "not_assessed" for s in statuses):
+            assessed = [s for s in statuses if s != "not_assessed"]
+            if not assessed:
+                # All mapped categories need LLM — cannot assess this control
                 status = "not_assessed"
-            elif any(s == "fail" for s in statuses):
+            elif any(s == "fail" for s in assessed):
+                # At least one assessed category has findings
                 status = "fail"
-            elif any(s == "not_assessed" for s in statuses):
-                status = "partial"
             else:
+                # All assessed categories pass (unassessed ones don't downgrade)
                 status = "pass"
 
             finding_count = sum(

@@ -397,7 +397,15 @@ def _score_hero(i):
         f'<div class="score-stat"><div class="score-stat-val">{total_findings}</div><div class="score-stat-label">Findings</div></div>'
         f'<div class="score-stat"><div class="score-stat-val">{hoi}</div><div class="score-stat-label">HOI Score</div></div>'
         f'<div class="score-stat"><div class="score-stat-val">{i.rules_active}</div><div class="score-stat-label">Rules Active</div></div>'
-        f'</div></div></div>'
+        f'</div></div>'
+        + (f'<div style="max-width:960px;margin:16px auto 0;padding:0 40px;">'
+           f'<div style="background:rgba(253,149,6,0.15);border:1px solid rgba(253,149,6,0.3);'
+           f'border-radius:8px;padding:12px 16px;font-size:13px;color:rgba(255,255,255,0.8);">'
+           f'This score reflects <strong>{round(i.rules_active / i.rules_total * 100)}%</strong> of available checks '
+           f'(pattern-based only). {i.rules_skipped_llm} rules for regulatory and semantic analysis require '
+           f'an LLM judge and are not included in this assessment.</div></div>'
+           if i.rules_skipped_llm > 0 else '')
+        + '</div>'
     )
 
 
@@ -535,9 +543,10 @@ def _oversight_section(i):
         f'<div class="section-header"><h2>Human Oversight Index</h2>{badge}</div>'
         f'<p class="section-desc">Measures how actively you supervise AI tool actions. 1.0 = full oversight. '
         f'Sessions with 50+ tool actions and &lt;3 user interactions are auto-pilot.</p>'
-        f'<div class="hoi-hero"><div style="text-align:center;">{ring}'
-        f'<div style="position:relative;top:-68px;font-size:28px;font-weight:800;color:{hoi_color};">{hoi}</div>'
-        f'<div style="position:relative;top:-68px;" class="hoi-label">HOI</div></div>'
+        f'<div class="hoi-hero"><div style="position:relative;width:100px;height:100px;flex-shrink:0;">{ring}'
+        f'<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">'
+        f'<div style="font-size:28px;font-weight:800;color:{hoi_color};">{hoi}</div>'
+        f'<div class="hoi-label">HOI</div></div></div>'
         f'<div style="flex:1;"><div style="display:flex;gap:40px;">'
         f'<div><div style="font-size:24px;font-weight:700;">{ov.total_sessions}</div><div class="hoi-label">Total Sessions</div></div>'
         f'<div><div style="font-size:24px;font-weight:700;">{ov.auto_pilot_sessions}</div><div class="hoi-label">Auto-pilot</div></div>'

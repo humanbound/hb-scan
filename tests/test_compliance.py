@@ -39,18 +39,18 @@ class TestComplianceAssessment:
             if assessed:
                 assert fw.alignment_score >= 0.5  # at least some pass
 
-    def test_partial_status_when_mixed(self):
-        """A control mapped to both passing and not_assessed categories → partial."""
+    def test_pass_when_assessed_categories_clean(self):
+        """A control with clean assessed categories passes even if some are not_assessed."""
         findings = []
         insights = aggregate_findings(findings, sessions_scanned=1, rules_skipped_llm=5)
         frameworks = assess_compliance(insights)
 
-        # Find a control that maps to both a clean category and regulatory
+        # Find a control that maps to both a clean category and regulatory (not_assessed)
         for fw in frameworks:
             for c in fw.controls:
                 if "regulatory_data_exposure" in c.mapped_categories and len(c.mapped_categories) > 1:
-                    # This control should be partial (one category pass, one not_assessed)
-                    assert c.status == "partial"
+                    # Assessed categories are clean → pass (unassessed don't downgrade)
+                    assert c.status == "pass"
                     return
 
     def test_framework_counts(self):
