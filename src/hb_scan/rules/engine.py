@@ -127,7 +127,7 @@ class RuleEngine:
         findings: List[Finding] = []
         targets = self._extract_targets(rule, session)
 
-        for target_name, text in targets:
+        for target_name, text, msg_index in targets:
             match = compiled.search(text)
             if not match:
                 continue
@@ -137,6 +137,8 @@ class RuleEngine:
             # Check exclusions against context (not entire message)
             if self._is_excluded(rule, context):
                 continue
+
+            evidence = self._build_evidence(session, msg_index)
 
             findings.append(Finding(
                 rule_id=rule.id,
@@ -153,39 +155,84 @@ class RuleEngine:
                 target=target_name,
                 references=[{"standard": r.standard, "url": r.url} for r in rule.references],
                 experimental=rule.experimental,
+                evidence=evidence,
             ))
 
         return findings
 
+    @staticmethod
+    def _build_evidence(session: Session, matched_msg_index: int, max_turns: int = 3) -> List[dict]:
+        """Extract conversation context around a matched message for evidence display."""
+        msgs = session.messages
+        if not msgs or matched_msg_index < 0 or matched_msg_index >= len(msgs):
+            return []
+
+        # Get surrounding messages: 1 before, the match, 1 after
+        start = max(0, matched_msg_index - 1)
+        end = min(len(msgs), matched_msg_index + 2)
+
+        evidence = []
+        for i in range(start, end):
+            m = msgs[i]
+            text = m.text[:500] if m.text else ""
+
+            # For tool calls, show the tool name + input summary
+            tool_summary = ""
+            if m.tool_calls:
+                parts = []
+                for tc in m.tool_calls[:3]:
+                    inp = ""
+                    if tc.input:
+                        if isinstance(tc.input, dict):
+                            inp = tc.input.get("command", tc.input.get("file_path", str(tc.input)[:100]))
+                        else:
+                            inp = str(tc.input)[:100]
+                    parts.append(f"{tc.name}: {inp}")
+                tool_summary = " | ".join(parts)
+
+            content = text
+            if tool_summary:
+                content = f"{text}\n[Tool: {tool_summary}]" if text else f"[Tool: {tool_summary}]"
+
+            # Redact the evidence content
+            content = redact(content[:600])
+
+            evidence.append({
+                "role": m.role,
+                "text": content,
+                "is_match": i == matched_msg_index,
+            })
+
+        return evidence
+
     def _extract_targets(
         self, rule: Rule, session: Session
-    ) -> List[Tuple[str, str]]:
-        """Extract text to scan based on rule target."""
-        targets: List[Tuple[str, str]] = []
+    ) -> List[Tuple[str, str, int]]:
+        """Extract text to scan based on rule target. Returns (target_name, text, msg_index)."""
+        targets: List[Tuple[str, str, int]] = []
         target = rule.match.target
         tool_filter = rule.match.tool_filter
 
-        for msg in session.messages:
+        for idx, msg in enumerate(session.messages):
             if target in ("user_prompt", "any") and msg.role == "user":
-                targets.append(("user_prompt", msg.text))
+                targets.append(("user_prompt", msg.text, idx))
 
             if target in ("assistant_response", "any") and msg.role == "assistant":
-                targets.append(("assistant_response", msg.text))
+                targets.append(("assistant_response", msg.text, idx))
 
             if target in ("tool_input", "any"):
                 for tc in msg.tool_calls:
                     if tool_filter and tc.name != tool_filter:
                         continue
-                    # Serialize tool input for scanning
                     input_text = self._serialize_tool_input(tc)
-                    targets.append(("tool_input", input_text))
+                    targets.append(("tool_input", input_text, idx))
 
             if target in ("tool_output", "any"):
                 for tc in msg.tool_calls:
                     if tool_filter and tc.name != tool_filter:
                         continue
                     if tc.output:
-                        targets.append(("tool_output", tc.output))
+                        targets.append(("tool_output", tc.output, idx))
 
         return targets
 

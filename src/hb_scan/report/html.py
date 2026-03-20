@@ -255,6 +255,44 @@ _BRAND_LOGO = """<svg viewBox="240 670 170 150" style="height:40px;" fill="none"
 </svg>"""
 
 
+def _render_evidence(evidence: list) -> str:
+    """Render conversation evidence as a chat-style block."""
+    if not evidence:
+        return ""
+
+    turns = []
+    for e in evidence:
+        role = e.get("role", "")
+        text = _esc(e.get("text", ""))[:400]
+        is_match = e.get("is_match", False)
+
+        role_style = {
+            "user": "background:var(--orange-bg);color:var(--orange);",
+            "assistant": "background:#ddf4ff;color:#0969da;",
+            "system": "background:var(--surface-alt);color:var(--text-dim);",
+        }.get(role, "background:var(--surface-alt);color:var(--text-dim);")
+
+        highlight = "border-left:3px solid var(--brand-orange);padding-left:12px;" if is_match else ""
+
+        turns.append(
+            f'<div style="margin-bottom:8px;{highlight}">'
+            f'<span style="display:inline-block;padding:1px 8px;border-radius:3px;'
+            f'font-size:11px;font-weight:700;text-transform:uppercase;{role_style}">{_esc(role)}</span>'
+            f'<div style="font-size:13px;color:var(--text-muted);margin-top:4px;'
+            f'white-space:pre-wrap;word-break:break-word;line-height:1.5;">{text}</div>'
+            f'</div>'
+        )
+
+    return (
+        '<details style="margin:10px 0;">'
+        '<summary style="cursor:pointer;font-size:13px;color:var(--brand-orange);font-weight:600;">'
+        'View conversation context</summary>'
+        f'<div style="background:var(--surface);border-radius:8px;padding:16px;margin-top:8px;'
+        f'border:1px solid var(--border-light);">{"".join(turns)}</div>'
+        '</details>'
+    )
+
+
 def _esc(t):
     return _html.escape(str(t)) if t else ""
 
@@ -385,11 +423,14 @@ def _credentials_section(i):
     for c in sorted(creds.credentials, key=lambda c: (c.is_expired, c.credential_type)):
         status = '<span class="sev-badge sev-high">Active</span>' if not c.is_expired else '<span class="sev-badge sev-low">Expired</span>'
         preview = _esc(c.redacted_preview[:60])
+        evidence_html = _render_evidence(c.evidence) if c.evidence else ""
         rows.append(
             f'<tr><td>{_esc(c.credential_type)}</td><td>{status}</td>'
             f'<td><code style="font-size:12px;color:var(--text-muted);">{preview}</code></td>'
             f'<td>{c.first_seen or ""}</td></tr>'
         )
+        if evidence_html:
+            rows.append(f'<tr><td colspan="4" style="padding:0 12px 12px;">{evidence_html}</td></tr>')
 
     action = ""
     if creds.active_count > 0:
@@ -425,7 +466,8 @@ def _section_card(title, anchor, section, desc, refs):
 
     cards = []
     for f in section.findings[:8]:
-        evidence = f'<div class="evidence-block">{_esc(f.match_context)}</div>' if f.match_context else ""
+        match_block = f'<div class="evidence-block">{_esc(f.match_context)}</div>' if f.match_context else ""
+        evidence_block = _render_evidence(f.evidence) if f.evidence else ""
         mitigation = f'<div class="remediation-block"><strong>Fix:</strong> {_esc(f.mitigation)}</div>' if f.mitigation else ""
         ref_tags = "".join(f'<span class="tag">{_esc(r.get("standard", ""))}</span>' for r in f.references if r.get("standard"))
         tags_div = f'<div class="compliance-tags">{ref_tags}</div>' if ref_tags else ""
@@ -433,7 +475,7 @@ def _section_card(title, anchor, section, desc, refs):
             f'<div class="finding-card">'
             f'<div class="finding-title"><span class="sev-badge sev-{f.severity}">{f.severity}</span> {_esc(f.description)}</div>'
             f'<div class="finding-meta">Session: {f.session_id[:8]}... &middot; {_esc(f.project_path)}</div>'
-            f'{evidence}{mitigation}{tags_div}</div>'
+            f'{match_block}{evidence_block}{mitigation}{tags_div}</div>'
         )
 
     more = f'<p style="color:var(--text-dim);font-size:13px;">...and {len(section.findings) - 8} more</p>' if len(section.findings) > 8 else ""
