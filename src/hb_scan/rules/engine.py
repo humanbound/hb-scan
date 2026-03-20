@@ -134,7 +134,11 @@ class RuleEngine:
 
             context = self._extract_context(text, match.start(), match.end())
 
-            # Check exclusions against context (not entire message)
+            # Global exclusions — fake/test credentials and context compaction
+            if self._is_global_excluded(context, text):
+                continue
+
+            # Rule-specific exclusions against context (not entire message)
             if self._is_excluded(rule, context):
                 continue
 
@@ -258,8 +262,31 @@ class RuleEngine:
             parts.append(f"{key}: {val}" if isinstance(val, str) else f"{key}: {val}")
         return "\n".join(parts)
 
+    # Global exclusion patterns — applied to all rules before rule-specific excludes
+    _GLOBAL_EXCLUDES = re.compile(
+        r"("
+        r"FAKE_|fake_|DUMMY_|dummy_|TEST_|test_|EXAMPLE_|example_"  # test/fake variable names
+        r"|\.invalid"           # explicitly invalid tokens
+        r"|placeholder|changeme|your[_-]"  # placeholder values
+        r"|REDACTED|redacted|\*{4,}"  # already redacted
+        r"|This session is being continued from a previous"  # context compaction
+        r"|create a detailed summary of the conversation"  # compaction prompt
+        r")",
+        re.IGNORECASE,
+    )
+
+    @classmethod
+    def _is_global_excluded(cls, context: str, full_text: str) -> bool:
+        """Check global exclusions — fake creds, test values, context compaction."""
+        if cls._GLOBAL_EXCLUDES.search(context):
+            return True
+        # Check if the full message is a context compaction summary
+        if full_text and len(full_text) > 2000 and "continued from a previous" in full_text[:500]:
+            return True
+        return False
+
     def _is_excluded(self, rule: Rule, text: str) -> bool:
-        """Check if the text matches any exclusion pattern."""
+        """Check if the text matches any rule-specific exclusion pattern."""
         for i in range(len(rule.exclude)):
             exc_compiled = self._compiled.get(f"{rule.id}:exclude:{i}")
             if exc_compiled and exc_compiled.search(text):
