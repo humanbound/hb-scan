@@ -9,6 +9,8 @@ dist/
 build/
 *.egg-info/
 *.egg
+*.whl
+*.tar.gz
 
 # Virtual environments
 .venv/
@@ -19,16 +21,43 @@ env/
 .pytest_cache/
 .coverage
 htmlcov/
+.tox/
+.nox/
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
 Thumbs.db
+._*
+
+# Credentials / secrets — NEVER commit these
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+service-account*.json
+*.p12
+*.pfx
+token.json
+secrets.yaml
+secrets.yml
+
+# PyPI publishing
+.pypirc
 
 # Generated reports
 *.html
+
+# hb-scan local data
+.hb-scan/
+
+# Logs
+*.log
+scheduler.log
