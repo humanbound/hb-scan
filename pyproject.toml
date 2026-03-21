@@ -10,7 +10,7 @@ readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.10"
 authors = [
-    {name = "Humanbound", email = "oss@humanbound.ai"},
+    {name = "Humanbound", email = "hello@humanbound.ai"},
 ]
 keywords = ["ai", "security", "scanner", "secrets", "posture", "developer-hygiene"]
 classifiers = [
@@ -48,6 +48,9 @@ Issues = "https://github.com/humanbound/hb-scan/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+hb_scan = ["rules/builtin/*.yml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
