@@ -1,0 +1,127 @@
+id: sudo-usage
+version: 1
+category: dangerous_command
+severity: high
+detection: regex
+description: "Privileged command (sudo) executed via AI tool"
+references:
+  - standard: "OWASP LLM06:2025"
+    url: "https://genai.owasp.org/llmrisk/llm062025-excessive-agency/"
+  - standard: "SANS IDEsaster: 30+ CVEs in AI IDEs"
+    url: "https://maccarita.com/posts/idesaster/"
+match:
+  target: tool_input
+  tool_filter: Bash
+  pattern: "\\bsudo\\b"
+exclude:
+  - pattern: "sudo apt-get update"
+  - pattern: "sudo apt-get install"
+  - pattern: "sudo brew"
+  - pattern: "sudo pip install"
+mitigation: |
+  1. Review whether sudo was necessary for the task
+  2. Use rootless containers for development
+  3. Configure AI tools to prompt before privileged commands
+---
+id: rm-rf-destructive
+version: 2
+category: dangerous_command
+severity: high
+detection: regex
+description: "Destructive rm -rf targeting broad/system paths"
+match:
+  target: tool_input
+  tool_filter: Bash
+  # Only flag genuinely dangerous targets — not specific project subdirectories
+  pattern: "rm\\s+-[rR]f\\s+(/\\s|/\\*|~/\\s|~/\\*|~\\s|\\*\\s|\\.\\.\\s|\\.\\./|/(usr|etc|var|sys|System|Library|boot|bin|sbin)\\b)"
+mitigation: |
+  1. Use trash/recycle commands instead of rm -rf for broad paths
+  2. Never rm -rf system directories or home directory
+---
+id: chmod-777
+version: 1
+category: dangerous_command
+severity: high
+detection: regex
+description: "World-writable permissions set via AI tool"
+match:
+  target: tool_input
+  tool_filter: Bash
+  pattern: "chmod\\s+(-R\\s+)?777"
+mitigation: |
+  1. Use minimal permissions (e.g., 755 for directories, 644 for files)
+  2. Never use 777 in production
+---
+id: pipe-to-shell
+version: 1
+category: dangerous_command
+severity: high
+detection: regex
+description: "Remote script piped directly to shell — supply chain risk"
+references:
+  - standard: "OWASP LLM03:2025"
+    url: "https://genai.owasp.org/llmrisk/llm032025-supply-chain/"
+match:
+  target: tool_input
+  tool_filter: Bash
+  pattern: "(curl|wget)\\s+.*\\|\\s*(bash|sh|zsh)"
+mitigation: |
+  1. Download the script first, inspect it, then execute
+  2. Verify checksums and signatures of downloaded scripts
+---
+id: dd-disk-write
+version: 1
+category: dangerous_command
+severity: high
+detection: regex
+description: "Raw disk write operation via AI tool"
+match:
+  target: tool_input
+  tool_filter: Bash
+  pattern: "\\bdd\\s+if="
+mitigation: |
+  1. Double-check device paths before running dd
+  2. Use safer alternatives where possible
+---
+id: kill-system-process
+version: 3
+category: dangerous_command
+severity: medium
+detection: regex
+description: "System-wide killall command executed via AI tool"
+match:
+  target: tool_input
+  tool_filter: Bash
+  # Only flag killall of system processes, not dev servers
+  pattern: "killall\\s+(Finder|Dock|SystemUIServer|WindowServer|loginwindow|kernel_task)"
+mitigation: |
+  1. Use graceful termination (SIGTERM) before force-kill (SIGKILL)
+  2. Verify the target process before killing
+---
+id: iptables-modification
+version: 1
+category: dangerous_command
+severity: high
+detection: regex
+description: "Firewall rules modified via AI tool"
+match:
+  target: tool_input
+  tool_filter: Bash
+  pattern: "\\b(iptables|ufw)\\b"
+mitigation: |
+  1. Review firewall changes carefully before applying
+  2. Test in a staging environment first
+---
+id: mkfs-format
+version: 1
+category: dangerous_command
+severity: high
+detection: regex
+description: "Filesystem format operation via AI tool"
+match:
+  target: tool_input
+  tool_filter: Bash
+  pattern: "\\bmkfs\\b"
+mitigation: |
+  1. Verify the target device is correct before formatting
+  2. Back up data before any format operation

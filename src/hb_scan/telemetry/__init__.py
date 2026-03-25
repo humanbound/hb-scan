@@ -1,0 +1,1 @@
+"""Anonymous telemetry — opt-out."""

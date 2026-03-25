@@ -1,0 +1,93 @@
+id: pip-install-from-url
+version: 1
+category: supply_chain_risk
+severity: medium
+detection: regex
+description: "pip install from URL/git source — potential slopsquatting risk"
+references:
+  - standard: "OWASP LLM03:2025"
+    url: "https://genai.owasp.org/llmrisk/llm032025-supply-chain/"
+  - standard: "USENIX 2025: 19.7% of AI-suggested packages are hallucinated"
+    url: "https://arxiv.org/html/2406.10279v1"
+match:
+  target: tool_input
+  tool_filter: Bash
+  pattern: "pip\\s+install\\s+.*(git\\+|https?://|git://)"
+mitigation: |
+  1. Verify the package exists on PyPI before installing
+  2. Check package popularity and maintenance status
+  3. Use pip install from PyPI registry only
+---
+id: npm-install-from-git
+version: 1
+category: supply_chain_risk
+severity: medium
+detection: regex
+description: "npm install from git/github URL — bypass of registry verification"
+match:
+  target: tool_input
+  tool_filter: Bash
+  pattern: "npm\\s+install\\s+.*(git\\+|github:|https?://github)"
+mitigation: |
+  1. Install from npm registry only
+  2. Verify the package with npm audit
+---
+id: curl-pipe-to-pip
+version: 1
+category: supply_chain_risk
+severity: high
+detection: regex
+description: "Remote script piped to pip — high supply chain risk"
+references:
+  - standard: "ENISA ETL 2025: Slopsquatting"
+    url: "https://www.enisa.europa.eu/publications/enisa-threat-landscape-2025"
+match:
+  target: tool_input
+  tool_filter: Bash
+  pattern: "(curl|wget).*\\|.*pip\\s+install"
+mitigation: |
+  1. Download and inspect scripts before piping to pip
+  2. Use official installation methods only
+---
+id: go-get-unknown-domain
+version: 1
+category: supply_chain_risk
+severity: medium
+detection: regex
+description: "go get from non-standard domain"
+match:
+  target: tool_input
+  tool_filter: Bash
+  pattern: "go\\s+(get|install)\\s+(?!github\\.com|golang\\.org|google\\.golang\\.org)"
+mitigation: |
+  1. Verify the module source before installing
+  2. Use Go module proxy (proxy.golang.org)
+---
+id: cargo-install-git
+version: 1
+category: supply_chain_risk
+severity: medium
+detection: regex
+description: "cargo install from git source"
+match:
+  target: tool_input
+  tool_filter: Bash
+  pattern: "cargo\\s+install\\s+--git"
+mitigation: |
+  1. Install from crates.io registry when possible
+  2. Verify the repository and commit before installing
+---
+id: pip-install-unusual-package
+version: 1
+category: supply_chain_risk
+severity: low
+detection: regex
+description: "pip install of package with unusual name (potential hallucination)"
+match:
+  target: tool_input
+  tool_filter: Bash
+  pattern: "pip\\s+install\\s+[a-z][a-z0-9]*[-_][a-z0-9]*[-_][a-z0-9]*[-_][a-z0-9]+"
+mitigation: |
+  1. Verify the package exists on pypi.org before installing
+  2. Check download counts and last update date
+  3. AI tools hallucinate package names 19.7% of the time (USENIX 2025)

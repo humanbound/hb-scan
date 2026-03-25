@@ -1,0 +1,83 @@
+id: home-config-access
+version: 2
+category: scope_violation
+severity: medium
+detection: regex
+description: "AI tool accessed user home directory config files"
+references:
+  - standard: "OWASP Agentic ASI03: Identity and Privilege Abuse"
+    url: "https://genai.owasp.org/2025/12/09/owasp-top-10-for-agentic-applications-the-benchmark-for-agentic-security-in-the-age-of-autonomous-ai/"
+  - standard: "SANS IDEsaster: 24 CVEs for cross-boundary access"
+    url: "https://maccarita.com/posts/idesaster/"
+match:
+  target: tool_input
+  pattern: "(/Users/[^/]+/\\.|/home/[^/]+/\\.)(bashrc|zshrc|profile|bash_profile|npmrc|netrc|gitconfig|docker)"
+exclude:
+  - pattern: "\\.claude/"
+  - pattern: "\\.vscode/"
+mitigation: |
+  1. Configure AI tools with explicit project boundaries
+  2. Use containerized development environments
+---
+id: ssh-config-access
+version: 2
+category: scope_violation
+severity: high
+detection: regex
+description: "AI tool accessed SSH configuration"
+match:
+  # Only match actual tool reads, not text discussing SSH
+  target: tool_input
+  tool_filter: Read
+  pattern: "\\.ssh/(config|known_hosts|authorized_keys|id_)"
+exclude:
+  - pattern: "(example|redact|should|how to|detect|scan)"
+mitigation: |
+  1. Exclude ~/.ssh from AI tool file access
+  2. Use SSH agent for key management
+---
+id: aws-config-access
+version: 2
+category: scope_violation
+severity: high
+detection: regex
+description: "AI tool accessed AWS credentials/config"
+match:
+  target: tool_input
+  tool_filter: Read
+  pattern: "\\.aws/(credentials|config)"
+mitigation: |
+  1. Exclude ~/.aws from AI tool context
+  2. Use IAM roles instead of credential files
+---
+id: etc-system-access
+version: 2
+category: scope_violation
+severity: medium
+detection: regex
+description: "AI tool accessed system configuration files"
+match:
+  # Only match actual tool reads of /etc files, not path traversal test payloads
+  target: tool_input
+  tool_filter: Read
+  pattern: "file_path.*(/etc/(passwd|shadow|hosts|sudoers|ssh))"
+exclude:
+  - pattern: "(\\.\\.|\\.\\./|traversal|payload|attack|test|Path Traversal|try)"
+mitigation: |
+  1. AI tools should not need access to system files
+  2. Use sandboxed environments for system administration tasks
+---
+id: git-config-credentials
+version: 2
+category: scope_violation
+severity: high
+detection: regex
+description: "AI tool read git config with potential credentials"
+match:
+  # Only match actual file reads, not text discussing .git/config
+  target: tool_input
+  tool_filter: Read
+  pattern: "file_path.*\\.git/config"
+mitigation: |
+  1. Use credential helpers instead of storing credentials in .git/config
+  2. Exclude .git directories from AI tool context

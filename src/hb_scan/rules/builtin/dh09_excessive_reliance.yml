@@ -1,0 +1,29 @@
+id: auto-pilot-session
+version: 1
+category: excessive_reliance
+severity: info
+detection: regex
+experimental: true
+description: "Session with minimal human oversight — 50+ tool executions with fewer than 3 substantive user messages"
+references:
+  - standard: "OWASP LLM09:2025 Misinformation (formerly Overreliance)"
+    url: "https://genai.owasp.org/llmrisk/llm092025-misinformation/"
+  - standard: "EU AI Act Article 14: Human Oversight"
+    url: "https://artificialintelligenceact.eu/article/14/"
+  - standard: "Mata v. Avianca: lawyers sanctioned for citing AI-hallucinated cases"
+    url: "https://en.wikipedia.org/wiki/Mata_v._Avianca,_Inc."
+  - standard: "Air Canada: company liable for AI chatbot's fabricated policy"
+    url: "https://www.cbc.ca/news/canada/british-columbia/air-canada-chatbot-lawsuit-1.7116416"
+  - standard: "NIST AI RMF Measure 2.8: monitor AI override statistics"
+    url: "https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf"
+  - standard: "GitHub/Accenture: 88% of accepted Copilot code retained without modification"
+    url: "https://github.blog/news-insights/research/research-quantifying-github-copilots-impact-in-the-enterprise-with-accenture/"
+match:
+  type: session_heuristic
+  condition: tool_executions >= 50 AND user_messages <= 3
+mitigation: |
+  1. Maintain an active role in AI conversations — ask questions, verify assumptions
+  2. Review AI-generated outputs before accepting, especially for critical changes
+  3. Configure AI tools to require explicit approval for high-impact actions
+  4. Be aware of automation bias — less experienced users accept AI suggestions more readily (31.9% vs 26.2%)
+  5. Companies are legally liable for AI-provided information (Air Canada precedent)
